@@ -1,0 +1,43 @@
+name: Daily Airbnb Trade Scraper
+
+on:
+  schedule:
+    # 매 6시간마다 자동 실행 (한국 시간 기준 하루 4회 자동 업데이트)
+    - cron: '0 */6 * * *'
+  workflow_dispatch: # GitHub 웹에서 버튼 눌러 언제든 즉시 실행 가능
+
+permissions:
+  contents: write
+
+jobs:
+  scrape:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: 저장소 체크아웃
+      uses: actions/checkout@v4
+
+    - name: 파이썬 3.10 설정
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.10'
+
+    - name: 필수 라이브러리 설치
+      run: |
+        pip install requests beautifulsoup4
+
+    - name: 에어비앤비 매물 최신 크롤링 실행
+      run: |
+        python scraper.py
+
+    - name: 최신 데이터 깃허브에 자동 커밋 & 푸시
+      run: |
+        git config --local user.email "action@github.com"
+        git config --local user.name "AirbnbScanner Bot"
+        git add listings.json
+        if git diff --staged --quiet; then
+          echo "새로운 변경사항이 없습니다."
+        else
+          git commit -m "Auto: Update airbnb trade listings [$(date +'%Y-%m-%d %H:%M')]"
+          git push
+        fi
